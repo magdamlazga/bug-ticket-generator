@@ -1,0 +1,13 @@
+Pipeline: shopflow-regression-nightly #4182
+Environment: staging | Build: 3.14.0-rc2 | Browser: Chrome 142
+Test: test_checkout_with_saved_card
+
+2026-10-28 02:14:07 INFO  Logged in as test.buyer01@example.com
+2026-10-28 02:14:09 INFO  Added SKU-10482 to basket, quantity 2
+2026-10-28 02:14:12 INFO  Selected saved card ending 4242
+2026-10-28 02:14:13 INFO  POST /api/v2/payments/authorise
+2026-10-28 02:14:43 ERROR Response 504 Gateway Timeout after 30002 ms
+2026-10-28 02:14:43 ERROR payment-service: upstream request to gateway.example.com timed out
+2026-10-28 02:14:44 INFO  Order status: PENDING
+2026-10-28 02:14:44 FAIL  AssertionError: expected order status "CONFIRMED", got "PENDING"
+Result: failed on 3 of 3 retries. The same test passed on build 3.13.2.

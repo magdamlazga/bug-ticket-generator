@@ -1,0 +1,13 @@
+Pipeline: shopflow-mobile-smoke #977
+Environment: staging | Build: 3.14.0-rc2 | Device: Pixel 9 emulator, Android 16 | App: 5.2.0 (beta)
+Test: test_basket_badge_updates_after_remove
+
+2026-10-29 09:05:11 INFO  Launched app, logged in as test.buyer03@example.com
+2026-10-29 09:05:15 INFO  Added SKU-20011 to basket
+2026-10-29 09:05:16 INFO  Added SKU-20345 to basket
+2026-10-29 09:05:16 INFO  Basket badge shows 2
+2026-10-29 09:05:20 INFO  Opened basket, removed SKU-20011
+2026-10-29 09:05:21 INFO  Basket screen lists 1 item
+2026-10-29 09:05:22 INFO  Navigated back to home screen
+2026-10-29 09:05:22 FAIL  AssertionError: expected basket badge "1", got "2"
+Result: failed 2 of 3 retries (passed once). Badge corrects itself after app restart.

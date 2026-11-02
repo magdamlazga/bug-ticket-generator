@@ -1,0 +1,12 @@
+Pipeline: shopflow-regression-nightly #4182
+Environment: staging | Build: 3.14.0-rc2 | Browser: Chrome 142
+Test: test_search_handles_special_characters
+
+2026-10-28 02:33:02 INFO  Opened homepage
+2026-10-28 02:33:03 INFO  Typed search query: "kids' t-shirt & shorts"
+2026-10-28 02:33:03 INFO  GET /api/v2/search?q=kids'%20t-shirt%20&%20shorts
+2026-10-28 02:33:04 ERROR Response 500 Internal Server Error
+2026-10-28 02:33:04 ERROR search-service: SyntaxError near "'" in query parser
+2026-10-28 02:33:04 INFO  Page shows "Something went wrong"
+2026-10-28 02:33:04 FAIL  AssertionError: expected at least 1 result, got error page
+Result: failed on 3 of 3 retries. Query "kids t-shirt" without ' and & returns 24 results.
