@@ -8,9 +8,14 @@ Usage:
 
 Drop a .log or .txt file into logs/ and a markdown ticket with the same name
 appears in tickets/. To regenerate a ticket, delete it and it will be recreated.
+
+If a new log shows the same issue as an existing ticket, no new ticket is
+created. The log is recorded in tickets/duplicates.json and noted at the
+bottom of the existing ticket instead.
 """
 
 import argparse
+import json
 import os
 import time
 from pathlib import Path
@@ -22,6 +27,7 @@ from openai import OpenAI
 BASE_DIR = Path(__file__).parent
 LOGS_DIR = BASE_DIR / "logs"
 TICKETS_DIR = BASE_DIR / "tickets"
+DUPLICATES_FILE = TICKETS_DIR / "duplicates.json"  # duplicate log -> existing ticket
 LOG_SUFFIXES = (".log", ".txt")
 
 # Skip files changed in the last few seconds - they may still be being written
@@ -64,14 +70,70 @@ def create_ticket(openai, log_text):
     return response.choices[0].message.content
 
 
+duplicate_check_prompt = """
+You are a senior QA engineer triaging test failures.
+You get a new test failure log and the existing bug tickets.
+
+Decide whether the new log shows the same underlying issue as one of the existing tickets.
+It is the same issue if the failing behaviour and likely cause match, even when the
+test run, build, user, timestamps or wording are different.
+A different failure in the same feature is NOT a duplicate.
+
+Respond in JSON only:
+{"duplicate_of": "<file name of the matching ticket, or null>", "reason": "<one sentence>"}
+"""
+
+
+def find_duplicate(openai, log_text):
+    """Return (existing ticket file, reason) if this log repeats a known issue, else (None, reason)."""
+    existing_tickets = sorted(TICKETS_DIR.glob("*.md"))
+    if not existing_tickets:
+        return None, "no existing tickets"
+
+    tickets_text = "\n\n".join(
+        f"### {ticket.name}\n{ticket.read_text(encoding='utf-8')}" for ticket in existing_tickets
+    )
+    messages = [
+        {"role": "system", "content": duplicate_check_prompt},
+        {"role": "user", "content": f"Existing tickets:\n\n{tickets_text}\n\nNew log:\n\n{log_text}"},
+    ]
+    response = openai.chat.completions.create(
+        model=MODEL,
+        reasoning_effort="none",
+        messages=messages,
+        response_format={"type": "json_object"},
+    )
+    result = json.loads(response.choices[0].message.content)
+    match = TICKETS_DIR / str(result.get("duplicate_of"))
+    if result.get("duplicate_of") and match in existing_tickets:
+        return match, result.get("reason", "")
+    return None, result.get("reason", "")
+
+
+def load_duplicates():
+    if DUPLICATES_FILE.exists():
+        return json.loads(DUPLICATES_FILE.read_text(encoding="utf-8"))
+    return {}
+
+
+def record_duplicate(log_file, ticket_file):
+    """Remember the duplicate so it isn't checked again, and note it on the existing ticket."""
+    duplicates = load_duplicates()
+    duplicates[log_file.name] = ticket_file.name
+    DUPLICATES_FILE.write_text(json.dumps(duplicates, indent=2), encoding="utf-8")
+    with ticket_file.open("a", encoding="utf-8") as ticket:
+        ticket.write(f"\n\n_Also seen in: {log_file.name}_\n")
+
+
 def find_new_logs():
-    """Return logs that don't have a ticket yet and have finished being written."""
+    """Return logs that haven't been handled yet and have finished being written."""
     now = time.time()
+    duplicates = load_duplicates()
     new_logs = []
     for log_file in sorted(LOGS_DIR.iterdir()):
         if log_file.suffix not in LOG_SUFFIXES:
             continue
-        if (TICKETS_DIR / f"{log_file.stem}.md").exists():
+        if (TICKETS_DIR / f"{log_file.stem}.md").exists() or log_file.name in duplicates:
             continue
         if now - log_file.stat().st_mtime < SETTLE_SECONDS:
             continue
@@ -82,9 +144,16 @@ def find_new_logs():
 def process_new_logs(openai):
     for log_file in find_new_logs():
         ticket_file = TICKETS_DIR / f"{log_file.stem}.md"
-        print(f"New log: {log_file.name} - creating ticket...")
+        print(f"New log: {log_file.name} - checking for an existing ticket...")
         try:
-            ticket = create_ticket(openai, log_file.read_text(encoding="utf-8"))
+            log_text = log_file.read_text(encoding="utf-8")
+            existing_ticket, reason = find_duplicate(openai, log_text)
+            if existing_ticket:
+                record_duplicate(log_file, existing_ticket)
+                print(f"  Duplicate of {existing_ticket.name} - no new ticket ({reason})")
+                continue
+            print("  New issue - creating ticket...")
+            ticket = create_ticket(openai, log_text)
         except Exception as error:
             # Leave it without a ticket so it is retried on the next check
             print(f"  Failed: {error}")

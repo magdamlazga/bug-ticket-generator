@@ -30,12 +30,23 @@ logs/checkout_saved_card.log   ──►   LLM   ──►   tickets/checkout_sa
 - Logs that already have a ticket are skipped, so nothing is sent to the API twice.
 - To regenerate a ticket, delete it from `tickets/`.
 
+## Duplicate detection
+
+The same bug often fails several tests, or fails again in the next night's run, so different log files can describe one issue. Before creating a ticket, `watch_logs.py` asks the LLM to compare the new log with the existing tickets. It counts as the same issue when the failing behaviour and likely cause match, even if the test, build, user or timestamps differ.
+
+When a duplicate is found:
+- No new ticket is created.
+- The existing ticket gets an _"Also seen in: <log file>"_ line, so you can see how often an issue occurs.
+- The log is recorded in `tickets/duplicates.json` so it isn't checked again. To re-check a log, remove its entry from that file.
+
+Example: `guest_checkout_payment.log` comes from a different test, browser and pipeline, but it fails with the same payment gateway timeout as `checkout_saved_card.log`. It gets linked to the existing ticket instead of creating a second one.
+
 ## Two ways to run it
 
 | File | What it does |
 |------|--------------|
 | `ticket_creation.ipynb` | Interactive version: run the cell to process all new logs and see the tickets rendered in the notebook. |
-| `watch_logs.py` | Automated version: keeps running and creates a ticket as soon as a new log appears in `logs/`. |
+| `watch_logs.py` | Automated version: keeps running and creates a ticket as soon as a new log appears in `logs/`, skipping logs that repeat a known issue. |
 
 ```bash
 python watch_logs.py              # watch the folder, check every 5 seconds
@@ -51,4 +62,4 @@ Requires Python 3.12+ with `openai` and `python-dotenv`, and an `OPENAI_API_KEY`
 
 ## Sample data
 
-`logs/` contains four made-up failure logs (checkout payment timeout, password reset, search with special characters, mobile basket badge) to try it out.
+`logs/` contains five made-up failure logs to try it out: checkout payment timeout, password reset, search with special characters, mobile basket badge, and a guest checkout log that is a duplicate of the checkout payment timeout.

@@ -1,0 +1,13 @@
+Pipeline: shopflow-e2e-smoke #2291
+Environment: staging | Build: 3.14.0-rc2 | Browser: Safari 19
+Test: test_guest_checkout_card_payment
+
+2026-10-29 07:40:51 INFO  Started guest checkout
+2026-10-29 07:40:53 INFO  Added SKU-31007 to basket, quantity 1
+2026-10-29 07:40:58 INFO  Entered new card ending 1111
+2026-10-29 07:40:59 INFO  POST /api/v2/payments/authorise
+2026-10-29 07:41:29 ERROR Response 504 Gateway Timeout after 30001 ms
+2026-10-29 07:41:29 ERROR payment-service: upstream request to gateway.example.com timed out
+2026-10-29 07:41:30 INFO  Confirmation page shows "We're processing your order"
+2026-10-29 07:41:30 FAIL  AssertionError: expected order status "CONFIRMED", got "PENDING"
+Result: failed on 2 of 2 retries.
