@@ -64,7 +64,7 @@ def create_ticket(openai, log_text):
     ]
     response = openai.chat.completions.create(
         model=MODEL,
-        reasoning_effort="none",
+        reasoning_effort="medium",
         messages=messages,
     )
     return response.choices[0].message.content
@@ -99,7 +99,7 @@ def find_duplicate(openai, log_text):
     ]
     response = openai.chat.completions.create(
         model=MODEL,
-        reasoning_effort="none",
+        reasoning_effort="medium",
         messages=messages,
         response_format={"type": "json_object"},
     )
