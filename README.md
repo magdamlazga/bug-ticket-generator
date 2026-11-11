@@ -1,6 +1,12 @@
-# Bug Ticket Generator
+# Bug Ticket Generator with a Gradio UI
 
 Turns raw automated-test failure logs into clear, structured bug tickets using an LLM.
+
+A failed test log goes in and a ready-to-review ticket comes out, always in the same format: title, summary, severity, steps to reproduce, expected and actual result, and the likely component. The project can be used in three ways:
+
+- **Web UI built with [Gradio](https://www.gradio.app/):** a simple screen in the browser where you pick, upload or paste a log, watch the ticket being written live, review it and save it. It needs no notebook or command-line knowledge, so anyone on the team can use it.
+- **Notebook batch run:** creates tickets for every new log in the `logs/` folder in one go.
+- **Folder watcher:** a script that keeps running, creates a ticket as soon as a new log appears and skips logs that repeat a known issue.
 
 ## Why this exists
 
@@ -41,12 +47,23 @@ When a duplicate is found:
 
 Example: `guest_checkout_payment.log` comes from a different test, browser and pipeline, but it fails with the same payment gateway timeout as `checkout_saved_card.log`. It gets linked to the existing ticket instead of creating a second one.
 
-## Two ways to run it
+## Three ways to run it
 
-| File | What it does |
-|------|--------------|
-| `ticket_creation.ipynb` | Interactive version: run the cell to process all new logs and see the tickets rendered in the notebook. |
+| Where | What it does |
+|-------|--------------|
+| `ticket_creation.ipynb`, first cell | Batch version: processes all new logs and shows the tickets rendered in the notebook. |
+| `ticket_creation.ipynb`, second cell | Web UI: opens a Gradio screen in the browser for creating one ticket at a time. |
 | `watch_logs.py` | Automated version: keeps running and creates a ticket as soon as a new log appears in `logs/`, skipping logs that repeat a known issue. |
+
+### The web UI
+
+The Gradio screen lets someone who doesn't use notebooks or the command line create a ticket:
+
+1. Pick a log from the `logs/` folder, upload a `.log` or `.txt` file, or paste the log text.
+2. Press **Create ticket** and the ticket is written out on screen as the model produces it.
+3. Review it, give it a name and press **Save ticket** to store it in `tickets/`. An existing ticket is never overwritten.
+
+### The watcher
 
 ```bash
 python watch_logs.py              # watch the folder, check every 5 seconds
@@ -58,7 +75,7 @@ The watcher waits until a file hasn't changed for a couple of seconds before rea
 
 ## Setup
 
-Requires Python 3.12+ with `openai` and `python-dotenv`, and an `OPENAI_API_KEY` in a `.env` file.
+Requires Python 3.12+ with `openai`, `python-dotenv` and `gradio`, and an `OPENAI_API_KEY` in a `.env` file.
 
 ## Sample data
 
